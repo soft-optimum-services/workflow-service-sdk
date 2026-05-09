@@ -1,33 +1,33 @@
 ## workflow-service-sdk
 
-Module Go : [`github.com/soft-optimum-services/workflow-service-sdk`](https://github.com/soft-optimum-services/workflow-service-sdk)
+Go module: [`github.com/soft-optimum-services/workflow-service-sdk`](https://github.com/soft-optimum-services/workflow-service-sdk)
 
-Ce projet est, pour l’instant, un **SDK client orienté API `workflow-service`** : il encapsule les appels HTTP vers les routes REST exposées par votre serveur workflow (templates + exécution).
+This project is a **client SDK for the `workflow-service` HTTP API**: it wraps HTTP calls to the REST routes exposed by your workflow server (templates + execution).
 
-Il fournit un client HTTP Go, des interfaces de dépendance, et des modèles de données alignés sur la forme JSON exposée par `workflow-service` afin de consommer :
+It provides a Go HTTP client, dependency interfaces, and data models aligned with the JSON shape returned by `workflow-service` so you can call:
 
-- les endpoints « template » (states / transitions / template)
-- les endpoints « execution » (can/execute transition, bind, history, etc.)
+- **Template** endpoints (states / transitions / template)
+- **Execution** endpoints (can/execute transition, bind, history, etc.)
 
-### Objectifs
+### Goals
 
-- **Centraliser** la consommation HTTP de `workflow-service` dans un module réutilisable.
-- **Stabiliser** les contrats côté consommateurs via des interfaces (mocks simples en tests).
-- **Éviter** la duplication de logique (URLs, enveloppes JSON, tri/filtrage des transitions, etc.).
+- **Centralize** HTTP consumption of `workflow-service` in a reusable module.
+- **Stabilize** consumer-side contracts via interfaces (straightforward mocks in tests).
+- **Avoid** duplicated logic (URLs, JSON envelopes, transition sorting/filtering, etc.).
 
-### Ce que ce module n’est pas (encore)
+### What this module is not (yet)
 
-- Un moteur de workflow.
-- Une implémentation serveur.
-- Le catalogue unique des types métier de votre application consommatrice (celle-ci peut garder ses propres modèles DB/UI).
+- A workflow engine.
+- A server implementation.
+- The single source of domain types for your consuming application (your app can keep its own DB/UI models).
 
-### Contrainte Go importante : `internal`
+### Important Go constraint: `internal`
 
-Souvent, une application place ses structs sous `…/internal/…`.
-En Go, un package `internal/...` **ne peut pas être importé** par un autre module.
+Applications often place structs under `…/internal/…`.
+In Go, an `internal/...` package **cannot be imported** by another module.
 
-Conséquence : ce SDK expose ses modèles dans `github.com/soft-optimum-services/workflow-service-sdk/model` en **dupliquant** la structure et les tags JSON attendus par l’API `workflow-service`.
-Si vous maintenez aussi des types dans votre app, il faut garder **la parité JSON** (tags, champs) lorsque le contrat API évolue.
+As a result, this SDK exposes its models under `github.com/soft-optimum-services/workflow-service-sdk/model` by **duplicating** the structure and JSON tags expected by the `workflow-service` API.
+If you also maintain types in your app, you must keep **JSON parity** (tags, fields) when the API contract changes.
 
 ### Installation (module)
 
@@ -35,18 +35,18 @@ Si vous maintenez aussi des types dans votre app, il faut garder **la parité JS
 go get github.com/soft-optimum-services/workflow-service-sdk
 ```
 
-Pour un développement local avant publication, utilisez une directive `replace` dans le `go.mod` du consommateur :
+For local development before publishing, add a `replace` directive in the consumer’s `go.mod`:
 
 ```go
-replace github.com/soft-optimum-services/workflow-service-sdk => ../chemin/vers/workflow-service-sdk
+replace github.com/soft-optimum-services/workflow-service-sdk => ../path/to/workflow-service-sdk
 ```
 
 ### Configuration
 
-Le client est construit à partir d’un `BaseURL` (origin HTTP de `workflow-service`).
-La helper `NewFromEnv()` lit `WORKFLOW_SERVICE_BASE_URL`.
+The client is built from a `BaseURL` (HTTP origin of `workflow-service`).
+The `NewFromEnv()` helper reads `WORKFLOW_SERVICE_BASE_URL`.
 
-Exemple :
+Example:
 
 ```go
 package main
@@ -70,18 +70,18 @@ func main() {
 }
 ```
 
-### Interfaces : dépendances modulaires
+### Interfaces: modular dependencies
 
-Le module expose des petites interfaces + une interface composite :
+The module exposes small interfaces plus a composite interface:
 
-- `TemplateReader` : lecture des templates (`ListStates`, `ListTransitions`, `GetTemplateByCode`)
-- `ExecutionClient` : exécution (`CanTransition`, `ExecuteTransition`, `BindEntity`, etc.)
-- `WorkflowQueries` : helpers dérivés (ex. `ListManualTransitionsFromState`, `ResolveTransitionTargetStateCode`)
-- `WorkflowClient` : interface composite (composition des trois ci-dessus)
+- `TemplateReader`: template reads (`ListStates`, `ListTransitions`, `GetTemplateByCode`)
+- `ExecutionClient`: execution (`CanTransition`, `ExecuteTransition`, `BindEntity`, etc.)
+- `WorkflowQueries`: derived helpers (e.g. `ListManualTransitionsFromState`, `ResolveTransitionTargetStateCode`)
+- `WorkflowClient`: composite interface (combines the three above)
 
-Recommandation : dépendre des **petites interfaces** lorsque c’est possible, et utiliser `WorkflowClient` seulement si un composant a réellement besoin de tout.
+Recommendation: depend on the **small interfaces** when possible, and use `WorkflowClient` only when a component truly needs the full surface.
 
-### Endpoints couverts
+### Covered endpoints
 
 #### Template
 
@@ -98,26 +98,26 @@ Recommandation : dépendre des **petites interfaces** lorsque c’est possible, 
 - `POST /api/v1/execution/bind`
 - `GET /api/v1/execution/transitions/{entityType}/{entityId}?role=...`
 
-### « Queries » (helpers)
+### “Queries” (helpers)
 
-Certaines opérations (UI, orchestration, batch) ont besoin de logique additionnelle :
+Some operations (UI, orchestration, batch) need extra logic:
 
-- `ListManualTransitionsFromState` : charge states+transitions, résout l’ID du `from_state`, filtre les transitions `manual` activées, trie par priorité puis code.
-- `ResolveTransitionTargetStateCode` : résout le `State.code` cible à partir d’un `transition_code`.
+- `ListManualTransitionsFromState`: loads states+transitions, resolves the `from_state` ID, filters enabled `manual` transitions, sorts by priority then code.
+- `ResolveTransitionTargetStateCode`: resolves the target `State.code` from a `transition_code`.
 
-### Layout du code
+### Code layout
 
-- `client.go` : struct `Client`, constructeurs
-- `http_transport.go` : transport HTTP GET/POST JSON
-- `template_reader.go` : endpoints template
-- `execution.go`, `execution_types.go` : endpoints execution
-- `queries.go` : helpers dérivés
-- `model/` : types JSON (Template/State/Transition/…)
+- `client.go`: `Client` struct, constructors
+- `http_transport.go`: HTTP GET/POST JSON transport
+- `template_reader.go`: template endpoints
+- `execution.go`, `execution_types.go`: execution endpoints
+- `queries.go`: derived helpers
+- `model/`: JSON types (Template/State/Transition/…)
 
-### Versioning / compatibilité
+### Versioning / compatibility
 
-Ce module est un SDK : sa compatibilité dépend du contrat HTTP/JSON de `workflow-service`.
-En cas de breaking change côté API (champs renommés, enveloppes modifiées), il faut adapter :
+This module is an SDK: compatibility follows the HTTP/JSON contract of `workflow-service`.
+When the API introduces breaking changes (renamed fields, altered envelopes), update:
 
-- les enveloppes de réponse dans le client
-- les types dans `model/`
+- response envelopes in the client
+- types under `model/`
