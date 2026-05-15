@@ -27,6 +27,7 @@ type ExecutionClient interface {
 type WorkflowQueries interface {
 	ListManualTransitionsFromState(ctx context.Context, templateCode, fromStateCode string) []wfmodel.Transition
 	ResolveTransitionTargetStateCode(ctx context.Context, templateCode, fromStateCode, transitionCode string) (string, error)
+	ResolveTransitionSourceStateCode(ctx context.Context, templateCode, transitionCode string) (string, error)
 }
 
 // WorkflowClient is the full workflow-service client contract.
